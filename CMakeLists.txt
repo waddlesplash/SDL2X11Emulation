@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.4.1)
 project(SDL2X11Emulation C)
 
-set(CMAKE_C_FLAGS_DEBUG -DDEBUG_SDL2X11_EMULATION)
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG_SDL2X11_EMULATION")
 
 find_package(SDL2 REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -75,3 +75,4 @@ target_include_directories(sdl2X11Emulation
 target_link_libraries(
         sdl2X11Emulation
 		SDL2 SDL2_ttf ${PIXMAN_LIBRARIES})
+target_link_options(sdl2X11Emulation PRIVATE -Wl,--no-undefined)

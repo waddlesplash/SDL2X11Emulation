@@ -1,5 +1,6 @@
-#include "X11/Xlib.h"
-#include "SDL.h"
+#include <X11/Xlib.h>
+#include <SDL2/SDL.h>
+
 #include "window.h"
 #include "events.h"
 #include "display.h"

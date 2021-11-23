@@ -5,8 +5,8 @@
 #include <errno.h>
 #include <dirent.h>
 #include <X11/Xlib.h>
-#include "SDL.h"
-#include "SDL_ttf.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "errors.h"
 #include "colors.h"
 #include "resourceTypes.h"
@@ -42,7 +42,7 @@ Array* fontSearchPaths = NULL;
 Array* fontCache = NULL;
 
 // Check if the given path points to an existing directory
-bool checkFontPath(const char* path) {
+Bool checkFontPath(const char* path) {
     if (path == NULL) return False;
     struct stat s;
     int err;
@@ -578,97 +578,108 @@ int XTextWidth(XFontStruct* font_struct, _Xconst char* string, int count) {
     return width;
 }
 
-Bool renderText(GPU_Target* renderTarget, GC gc, int x, int y, const char* string) {
-    LOG("Rendering text: '%s'\n", string);
-    if (string == NULL || string[0] == '\0') { return True; }
-    GraphicContext* gContext = GET_GC(gc);
-    SDL_Color color = {
-            GET_RED_FROM_COLOR(gContext->foreground),
-            GET_GREEN_FROM_COLOR(gContext->foreground),
-            GET_BLUE_FROM_COLOR(gContext->foreground),
-            GET_ALPHA_FROM_COLOR(gContext->foreground),
-    };
-    SDL_Surface* fontSurface = TTF_RenderUTF8_Blended(GET_FONT(gContext->font), string, color);
-    if (fontSurface == NULL) {
-        return False;
-    }
-    GPU_Image* fontImage = GPU_CopyImageFromSurface(fontSurface);
-    SDL_FreeSurface(fontSurface);
-    if (fontImage == NULL) {
-        return False;
-    }
-    y -= TTF_FontAscent(GET_FONT(gContext->font));
-    GPU_Blit(fontImage, NULL, renderTarget, x + fontImage->w / 2, y + fontImage->h / 2);
-    GPU_FreeImage(fontImage);
-    GPU_Flip(renderTarget);
-    return True;
+Bool renderText(Display *display, SDL_Renderer *renderer, GC gc, int x, int y, const char *string) {
+	LOG("Rendering text: '%s'\n", string);
+	if (string == NULL || string[0] == '\0') { return True; }
+	GraphicContext* gContext = GET_GC(gc);
+	SDL_Color color = {
+			GET_RED_FROM_COLOR(gContext->foreground),
+			GET_GREEN_FROM_COLOR(gContext->foreground),
+			GET_BLUE_FROM_COLOR(gContext->foreground),
+			GET_ALPHA_FROM_COLOR(gContext->foreground),
+	};
+	if (gContext->font == None) {
+		// TODO: do we care about XUnloadFont ?
+		gContext->font = XLoadFont(display, "fixed");
+	}
+	SDL_Surface* fontSurface = TTF_RenderUTF8_Blended(GET_FONT(gContext->font), string, color);
+	if (fontSurface == NULL) {
+		return False;
+	}
+	SDL_Rect destR;
+	destR.w = fontSurface->w;
+	destR.h = fontSurface->h;
+	SDL_Texture* fontTexture = SDL_CreateTextureFromSurface(renderer, fontSurface);
+	SDL_FreeSurface(fontSurface);
+	if (fontTexture == NULL) {
+		return False;
+	}
+	destR.x = x;
+	destR.y = y - TTF_FontAscent(GET_FONT(gContext->font))/* - 6*/;
+	// h and w are ignored
+	if (SDL_RenderCopy(renderer, fontTexture, NULL, &destR) != 0) {
+		return False;
+	}
+	SDL_DestroyTexture(fontTexture);
+	SDL_RenderPresent(renderer);
+	return True;
 }
 
 int XDrawString16(Display* display, Drawable drawable, GC gc, int x, int y, _Xconst XChar2b* string, int length) {
-    // https://tronche.com/gui/x/xlib/graphics/drawing-text/XDrawString16.html
-    SET_X_SERVER_REQUEST(display, X_PolyText16);
-    LOG("%s: Drawing on %lu\n", __func__, drawable);
-    TYPE_CHECK(drawable, DRAWABLE, display, 0);
-    if (gc == NULL) {
-        handleError(0, display, None, 0, BadGC, 0);
-        return 0;
-    }
-    if (length == 0 || ((Uint16*) string)[0] == 0) { return 1; }
-    GPU_Target* renderTarget;
-    GET_RENDER_TARGET(drawable, renderTarget);
-    if (renderTarget == NULL) {
-        LOG("Failed to get the render target in %s\n", __func__);
-        handleError(0, display, None, 0, BadDrawable, 0);
-        return 0;
-    }
-    size_t size;
-    char * text = decodeMbString((const wchar_t *) string, &size);
-    if (text == NULL) {
-        LOG("Out of memory: Failed to allocate memory in XDrawString16, raising BadMatch error.\n");
-        handleError(0, display, drawable, 0, BadMatch, 0);
-        return 0;
-    }
-    int res = 1;
-    if (!renderText(renderTarget, gc, x, y, text)) {
-        LOG("Rendering the text failed in %s: %s\n", __func__, SDL_GetError());
-        handleError(0, display, drawable, 0, BadMatch, 0);
-        free(text);
-        res = 0;
-    }
-    free(text);
-    return res;
+	// https://tronche.com/gui/x/xlib/graphics/drawing-text/XDrawString16.html
+	SET_X_SERVER_REQUEST(display, X_PolyText16);
+	LOG("%s: Drawing on %lu\n", __func__, drawable);
+	TYPE_CHECK(drawable, DRAWABLE, display, 0);
+	if (gc == NULL) {
+		handleError(0, display, None, 0, BadGC, 0);
+		return 0;
+	}
+	if (length == 0 || ((Uint16*) string)[0] == 0) { return 1; }
+	SDL_Renderer* renderer;
+	GET_RENDERER(drawable, renderer);
+	if (renderer == NULL) {
+		LOG("Failed to get the render target in %s\n", __func__);
+		handleError(0, display, None, 0, BadDrawable, 0);
+		return 0;
+	}
+	size_t size;
+	char * text = decodeMbString((const wchar_t *) string, &size);
+	if (text == NULL) {
+		LOG("Out of memory: Failed to allocate memory in XDrawString16, raising BadMatch error.\n");
+		handleError(0, display, drawable, 0, BadMatch, 0);
+		return 0;
+	}
+	int res = 1;
+	if (!renderText(display, renderer, gc, x, y, text)) {
+		LOG("Rendering the text failed in %s: %s\n", __func__, SDL_GetError());
+		handleError(0, display, drawable, 0, BadMatch, 0);
+		free(text);
+		res = 0;
+	}
+	free(text);
+	return res;
 }
 
 int XDrawString(Display* display, Drawable drawable, GC gc, int x, int y, _Xconst char* string, int length) {
-    // https://tronche.com/gui/x/xlib/graphics/drawing-text/XDrawString.html
-    SET_X_SERVER_REQUEST(display, X_PolyText8);
-    LOG("%s: Drawing on %lu\n", __func__, drawable);
-    TYPE_CHECK(drawable, DRAWABLE, display, 0);
-    if (gc == NULL) {
-        handleError(0, display, None, 0, BadGC, 0);
-        return 0;
-    }
-    if (length == 0 || string[0] == 0) { return 1; }
-    GPU_Target* renderTarget;
-    GET_RENDER_TARGET(drawable, renderTarget);
-    if (renderTarget == NULL) {
-        LOG("Failed to get the render target in %s\n", __func__);
-        handleError(0, display, None, 0, BadDrawable, 0);
-        return 0;
-    }
-    char* text = decodeString(string, length);
-    if (text == NULL) {
-        LOG("Out of memory: Failed to allocate decoded string in XDrawString, "
-                    "raising BadMatch error.\n");
-        handleError(0, display, None, 0, BadMatch, 0);
-        return 0;
-    }
-    int res = 1;
-    if (!renderText(renderTarget, gc, x, y, text)) {
-        LOG("Rendering the text failed in %s: %s\n", __func__, SDL_GetError());
-        handleError(0, display, drawable, 0, BadMatch, 0);
-        res = 0;
-    }
-    free(text);
-    return res;
+	// https://tronche.com/gui/x/xlib/graphics/drawing-text/XDrawString.html
+	SET_X_SERVER_REQUEST(display, X_PolyText8);
+	LOG("%s: Drawing on %lu\n", __func__, drawable);
+	TYPE_CHECK(drawable, DRAWABLE, display, 0);
+	if (gc == NULL) {
+		handleError(0, display, None, 0, BadGC, 0);
+		return 0;
+	}
+	if (length == 0 || string[0] == 0) { return 1; }
+	SDL_Renderer* renderer;
+	GET_RENDERER(drawable, renderer);
+	if (renderer == NULL) {
+		LOG("Failed to get the render target in %s\n", __func__);
+		handleError(0, display, None, 0, BadDrawable, 0);
+		return 0;
+	}
+	char* text = decodeString(string, length);
+	if (text == NULL) {
+		LOG("Out of memory: Failed to allocate decoded string in XDrawString, "
+					"raising BadMatch error.\n");
+		handleError(0, display, None, 0, BadMatch, 0);
+		return 0;
+	}
+	int res = 1;
+	if (!renderText(display, renderer, gc, x, y, text)) {
+		LOG("Rendering the text failed in %s: %s\n", __func__, SDL_GetError());
+		handleError(0, display, drawable, 0, BadMatch, 0);
+		res = 0;
+	}
+	free(text);
+	return res;
 }

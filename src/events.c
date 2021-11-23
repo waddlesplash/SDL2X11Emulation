@@ -302,35 +302,28 @@ int convertEvent(Display* display, SDL_Event* sdlEvent, XEvent* xEvent) {
                     }
                     type = ConfigureNotify;
                     FILL_STANDARD_VALUES(xconfigure);
-                    xEvent->xconfigure.event = eventWindow;
-                    xEvent->xconfigure.window = xEvent->xconfigure.event;
-                    if (sdlEvent->window.event == SDL_WINDOWEVENT_MOVED) {
-                        xEvent->xconfigure.x = sdlEvent->window.data1;
-                        xEvent->xconfigure.y = sdlEvent->window.data2;
-                    } else {
-                        SDL_GetWindowPosition(SDL_GetWindowFromID(sdlEvent->window.windowID),
-                                              &xEvent->xconfigure.x, &xEvent->xconfigure.y);
-                    }
-                    if (sdlEvent->window.event == SDL_WINDOWEVENT_RESIZED
-                        || sdlEvent->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-                        xEvent->xconfigure.width  = sdlEvent->window.data1;
-                        xEvent->xconfigure.height = sdlEvent->window.data2;
-                        if (GET_WINDOW_STRUCT(eventWindow)->renderTarget != NULL) {
-                            // This is necessary, because sdl gpu will otherwise use an incorrect virtual resolution
-                            // which will offset the rendering.
-                            GPU_MakeCurrent(GET_WINDOW_STRUCT(eventWindow)->renderTarget, sdlEvent->window.windowID);
-                            GPU_SetWindowResolution((Uint16) sdlEvent->window.data1,
-                                                    (Uint16) sdlEvent->window.data2);
-                        }
-                    } else {
-                        SDL_GetWindowSize(SDL_GetWindowFromID(sdlEvent->window.windowID),
-                                          &xEvent->xconfigure.width, &xEvent->xconfigure.height);
-                    }
-                    xEvent->xconfigure.border_width = GET_WINDOW_STRUCT(eventWindow)->borderWidth;
-                    xEvent->xconfigure.above = None;
-                    xEvent->xconfigure.override_redirect = GET_WINDOW_STRUCT(eventWindow)->overrideRedirect;
-                    break;
-                case SDL_WINDOWEVENT_MINIMIZED:
+					xEvent->xconfigure.event = eventWindow;
+					xEvent->xconfigure.window = xEvent->xconfigure.event;
+					if (sdlEvent->window.event == SDL_WINDOWEVENT_MOVED) {
+						xEvent->xconfigure.x = sdlEvent->window.data1;
+						xEvent->xconfigure.y = sdlEvent->window.data2;
+					} else {
+						SDL_GetWindowPosition(SDL_GetWindowFromID(sdlEvent->window.windowID),
+											  &xEvent->xconfigure.x, &xEvent->xconfigure.y);
+					}
+					if (sdlEvent->window.event == SDL_WINDOWEVENT_RESIZED
+						|| sdlEvent->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+						xEvent->xconfigure.width  = sdlEvent->window.data1;
+						xEvent->xconfigure.height = sdlEvent->window.data2;
+					} else {
+						SDL_GetWindowSize(SDL_GetWindowFromID(sdlEvent->window.windowID),
+										  &xEvent->xconfigure.width, &xEvent->xconfigure.height);
+					}
+					xEvent->xconfigure.border_width = GET_WINDOW_STRUCT(eventWindow)->borderWidth;
+					xEvent->xconfigure.above = None;
+					xEvent->xconfigure.override_redirect = GET_WINDOW_STRUCT(eventWindow)->overrideRedirect;
+					break;
+				case SDL_WINDOWEVENT_MINIMIZED:
                     LOG("Window %d minimized\n", sdlEvent->window.windowID);
                     return -1;
                     break;
@@ -710,8 +703,8 @@ void updateWindowRenderTargets(Display* display) {
         if (GET_WINDOW_STRUCT(children[i])->sdlWindow != NULL) {
             WindowStruct* windowStruct = GET_WINDOW_STRUCT(children[i]);
             LOG("Resetting render target of window %lu\n", children[i]);
-            GPU_FreeTarget(windowStruct->renderTarget);
-            windowStruct->renderTarget = GPU_CreateTargetFromWindow(SDL_GetWindowID(windowStruct->sdlWindow));
+			SDL_DestroyRenderer(windowStruct->sdlRenderer);
+			windowStruct->sdlRenderer = SDL_CreateRenderer(windowStruct->sdlWindow, -1, 0);
             SDL_Rect exposeRect;
             exposeRect.x = 0;
             exposeRect.y = 0;

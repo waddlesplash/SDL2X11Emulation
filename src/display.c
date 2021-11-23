@@ -2,8 +2,9 @@
 #define XLIB_ILLEGAL_ACCESS
 #include <X11/Xlib.h>
 #include "X11/Xutil.h"
-#include "SDL.h"
-#include "SDL_ttf.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+
 #include "window.h"
 #include "errors.h"
 #include "events.h"
@@ -13,18 +14,12 @@
 #include "atoms.h"
 #include "visual.h"
 #include "font.h"
-#include <jni.h>
-#include <SDL_gpu.h>
+
 #include <X11/X.h>
 #include <X11/Xutil.h>
 
 
-jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    setenv("DISPLAY", ":0", 0);
-    return JNI_VERSION_1_4;
-}
-
-void __attribute__((constructor)) _init() {
+static void __attribute__((constructor)) _init() {
     setenv("DISPLAY", ":0", 0);
 }
 
@@ -41,7 +36,6 @@ int XCloseDisplay(Display* display) {
         freeFontStorage();
         destroyScreenWindow(display);
         TTF_Quit();
-        GPU_Quit();
         SDL_Quit();
         freeVisuals();
     }
@@ -49,7 +43,7 @@ int XCloseDisplay(Display* display) {
         numDisplaysOpen--;
     }
     if (GET_DISPLAY(display)->nscreens > 0) {
-        free(&GET_DISPLAY(display)->screens);
+		free((GET_DISPLAY(display))->screens);
     }
     free(display);
     return 0;
@@ -78,7 +72,6 @@ Display* XOpenDisplay(_Xconst char* display_name) {
             return NULL;
         }
     }
-    GPU_SetDebugLevel(GPU_DEBUG_LEVEL_MAX);
     if (numDisplaysOpen == 0) {
         if (!(initVisuals() && initFontStorage())) {
             free(display);
@@ -86,7 +79,7 @@ Display* XOpenDisplay(_Xconst char* display_name) {
         }
     }
     numDisplaysOpen++;
-    
+
     display->qlen = 0;
     int eventFd = initEventPipe(display);
     if (eventFd < 0) {
@@ -167,13 +160,6 @@ Display* XOpenDisplay(_Xconst char* display_name) {
         XCloseDisplay(display);
         return NULL;
     }
-    GPU_SetInitWindow(SDL_GetWindowID(GET_WINDOW_STRUCT(SCREEN_WINDOW)->sdlWindow));
-    GET_WINDOW_STRUCT(SCREEN_WINDOW)->renderTarget = GPU_Init(0, 0, 0);
-    if (GET_WINDOW_STRUCT(SCREEN_WINDOW)->renderTarget == NULL) {
-        LOG("XOpenDisplay: Initializing SDL_gpu failed!\n");
-        XCloseDisplay(display);
-        return NULL;
-    }
     if (numDisplaysOpen == 1) {
         // Init the font search path
         XSetFontPath(display, NULL, 0);
@@ -241,7 +227,7 @@ int XUngrabServer(Display *display) {
     SET_X_SERVER_REQUEST(display, X_UngrabServer);
     WARN_UNIMPLEMENTED;
     return 1;
-} 
+}
 
 XHostAddress* XListHosts(Display *display, int *nhosts_return, Bool *state_return) {
     // https://tronche.com/gui/x/xlib/window-and-session-manager/controlling-host-access/XListHosts.html

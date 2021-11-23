@@ -1,8 +1,11 @@
-#include "X11/Xlib.h"
-#include "X11/Xutil.h"
 #include <inttypes.h>
+
+#include <pixman.h>
+
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/Xregion.h>
-#include "pixman.h"
+
 #include "drawing.h"
 #include "resourceTypes.h"
 

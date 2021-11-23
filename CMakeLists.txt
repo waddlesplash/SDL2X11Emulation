@@ -3,6 +3,10 @@ project(SDL2X11Emulation C)
 
 set(CMAKE_C_FLAGS_DEBUG -DDEBUG_SDL2X11_EMULATION)
 
+find_package(SDL2 REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PIXMAN pixman-1)
+
 add_library(sdl2X11Emulation SHARED
         include/X11/DECkeysym.h include/X11/HPkeysym.h include/X11/ImUtil.h
         include/X11/Sunkeysym.h include/X11/X.h include/X11/XF86keysym.h
@@ -65,8 +69,9 @@ target_include_directories(sdl2X11Emulation
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         PRIVATE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+		$<BUILD_INTERFACE:${PIXMAN_INCLUDE_DIRS}>)
 
 target_link_libraries(
         sdl2X11Emulation
-        SDL2 SDL_gpu_shared SDLTTF pixman)
+		SDL2 SDL2_ttf ${PIXMAN_LIBRARIES})

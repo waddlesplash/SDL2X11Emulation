@@ -74,11 +74,11 @@ Cursor XCreatePixmapCursor(Display* display, Pixmap source, Pixmap mask, XColor*
     // https://tronche.com/gui/x/xlib/pixmap-and-cursor/XCreatePixmapCursor.html
     SET_X_SERVER_REQUEST(display, X_CreateCursor);
     TYPE_CHECK(source, PIXMAP, display, None);
-    SDL_Texture* sourcePixmap = GET_PIXMAP_IMAGE(source);
+	SDL_Texture* sourcePixmap = GET_PIXMAP_TEXTURE(source);
     SDL_Texture* maskPixmap = NULL;
     if (mask != None) {
         TYPE_CHECK(mask, PIXMAP, display, None);
-        maskPixmap = GET_PIXMAP_IMAGE(mask);
+		maskPixmap = GET_PIXMAP_TEXTURE(mask);
     }
     return createPixmapCursor(display, sourcePixmap, maskPixmap, foreground_color,
                               background_color, x, y);

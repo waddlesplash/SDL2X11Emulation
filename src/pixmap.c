@@ -27,7 +27,7 @@ Pixmap XCreatePixmap(Display* display, Drawable drawable, unsigned int width, un
 		return None;
 	}
 	LOG("%s: addr= %lu, w = %d, h = %d\n", __func__, pixmap, width, height);
-	SDL_Texture* texture = SDL_CreateTexture(GET_WINDOW_STRUCT(SCREEN_WINDOW)->sdlRenderer,
+	SDL_Texture* texture = SDL_CreateTexture(getWindowRenderer(SCREEN_WINDOW),
 											 SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
 											 (int) width, (int) height);
 	if (texture == NULL) {

@@ -17,6 +17,17 @@ int XDestroyWindow(Display* display, Window window) {
     return 1;
 }
 
+
+Window XCreateSimpleWindow(Display* display, Window parent, int x, int y, unsigned int width,
+		unsigned int height, unsigned int border_width, unsigned long border, unsigned long background) {
+	XSetWindowAttributes attributes;
+	attributes.border_pixel = border;
+	attributes.background_pixel = background;
+	return XCreateWindow(display, parent, x, y, width, height, border_width,
+		CopyFromParent, CopyFromParent, CopyFromParent,
+		CWBackPixel | CWBorderPixel, &attributes);
+}
+
 Window XCreateWindow(Display* display, Window parent, int x, int y, unsigned int width,
                      unsigned int height, unsigned int border_width, int depth, unsigned int clazz,
                      Visual* visual, unsigned long valueMask, XSetWindowAttributes* attributes) {
@@ -54,12 +65,13 @@ Window XCreateWindow(Display* display, Window parent, int x, int y, unsigned int
         FREE_XID(windowID);
         return None;
     }
-    int visualClass = visual->CLASS_ATTRIBUTE;
+
+	if (visual == CopyFromParent)
+		visual = GET_WINDOW_STRUCT(parent)->visual;
+	int visualClass = visual ? visual->CLASS_ATTRIBUTE : 0;
     windowStruct->colormap = (Colormap) XCreateColormap(display, windowID, visual,
-                                                         visualClass == StaticGray ||
-                                                         visualClass == StaticColor ||
-                                                         visualClass == TrueColor ?
-                                                         AllocAll : AllocNone);
+		visualClass == StaticGray || visualClass == StaticColor || visualClass == TrueColor ?
+			AllocAll : AllocNone);
     SET_X_SERVER_REQUEST(display, X_CreateWindow);
     if (windowStruct->colormap == None) {
         LOG("Out of memory: Could not allocate the window colormap in XCreateWindow!\n");
@@ -70,7 +82,8 @@ Window XCreateWindow(Display* display, Window parent, int x, int y, unsigned int
     }
     // FIXME: Warning: Colormap is not initialized!
     // Set up the window ahead of time for event processing, so we can send the CreateNotify event
-    if (HAS_VALUE(valueMask, CWEventMask)) windowStruct->eventMask = attributes->event_mask;
+	if (HAS_VALUE(valueMask, CWEventMask))
+		windowStruct->eventMask = attributes->event_mask;
     postEvent(display, windowID, CreateNotify); 
     if (valueMask != 0) {
         XChangeWindowAttributes(display, windowID, valueMask, attributes);

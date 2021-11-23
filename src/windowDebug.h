@@ -10,8 +10,8 @@
 #ifdef DEBUG_WINDOWS
 
 void printWindowsHierarchy(void);
-//void drawWindowsDebugBorder();
-//void drawWindowsDebugSurfacePlane();
+void drawWindowDebugView();
+void drawDebugWindowSurfacePlanes();
 
 #endif /* DEBUG_WINDOWS */
 #endif /* WINDOWDEBUG_H */

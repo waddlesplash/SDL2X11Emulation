@@ -18,9 +18,9 @@ void flipScreen() {
 		}
 	}
 	#ifdef DEBUG_WINDOWS
-	printWindowHierarchy();
-//    drawDebugWindowSurfacePlanes();
-//    drawWindowDebugView();
+	printWindowsHierarchy();
+    //drawDebugWindowSurfacePlanes();
+    //drawWindowDebugView();
 	#endif
 }
 
@@ -56,7 +56,7 @@ SDL_Renderer* getWindowRenderer(Window window) {
 					fprintf(stderr, "WTF: SDL_CreateTexture failed in %s for window %p: %s\n",
 							__func__, window, SDL_GetError());
 					#ifdef DEBUG_WINDOWS
-					printWindowHierarchy();
+					printWindowsHierarchy();
 					#endif
 				} else {
 					GET_WINDOW_STRUCT(window)->sdlTexture = texture;
@@ -77,6 +77,24 @@ SDL_Renderer* getWindowRenderer(Window window) {
 		fprintf(stderr, "SDL_RenderSetViewport failed in %s: %s\n", __func__, SDL_GetError());
 	}
 	return renderer;
+}
+
+SDL_Surface* getRenderSurface(SDL_Renderer* renderer) {
+	SDL_Rect rect;
+	SDL_RenderGetViewport(renderer, &rect);
+	SDL_Surface* surface = SDL_CreateRGBSurface(0, rect.w, rect.h, SDL_SURFACE_DEPTH,
+												DEFAULT_RED_MASK, DEFAULT_GREEN_MASK,
+												DEFAULT_BLUE_MASK, DEFAULT_ALPHA_MASK);
+	if (surface == NULL) {
+		fprintf(stderr, "SDL_CreateRGBSurface failed in %s: %s\n", __func__, SDL_GetError());
+		return NULL;
+	}
+	if (SDL_RenderReadPixels(renderer, &rect, SDL_PIXELFORMAT_RGBA8888, surface->pixels, surface->pitch) != 0) {
+		fprintf(stderr, "SDL_RenderReadPixels failed in %s: %s\n", __func__, SDL_GetError());
+		SDL_FreeSurface(surface);
+		return NULL;
+	}
+	return surface;
 }
 
 int XFillPolygon(Display* display, Drawable d, GC gc, XPoint *points, int npoints, int shape, int mode) {

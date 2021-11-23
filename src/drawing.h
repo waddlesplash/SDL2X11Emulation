@@ -34,6 +34,7 @@ if (IS_TYPE(drawable, WINDOW)) {\
 }
 
 SDL_Renderer* getWindowRenderer(Window window);
+SDL_Surface* getRenderSurface(SDL_Renderer* renderer);
 void flipScreen(void);
 
 #endif /* _DRAWING_H_ */

@@ -66,7 +66,7 @@ void drawWindowDebugViewForChild(SDL_Renderer* renderer, Window window, int absP
 	GET_WINDOW_DIMS(window, windowRect.w, windowRect.h);
 	windowRect.x += absParentX;
 	windowRect.y += absParentY;
-	SDL_SetRenderDrawColor(renderer, ((drawColor >> 24) & 0xFF) * 0.9, ((drawColor >> 16) & 0xFF) * 0.9, ((drawColor >> 8) & 0xFF) * 0.9, 0xFF);
+	SDL_SetRenderDrawColor(renderer, ((drawColor >> 24) & 0xFF) * 0.9, ((drawColor >> 16) & 0xFF) * 0.9, ((drawColor >> 8) & 0xFF) * 0.9, 0x55);
 	SDL_RenderDrawRect(renderer, &windowRect);
 	Window* children = GET_CHILDREN(window);
 	for (i = 0; i < GET_WINDOW_STRUCT(window)->children.length; i++) {
@@ -87,7 +87,7 @@ void drawWindowDebugView() {
 			GET_WINDOW_POS(children[i], windowRect.x, windowRect.y);
 			GET_WINDOW_DIMS(children[i], windowRect.w, windowRect.h);
 			SDL_SetRenderDrawColor(windowStruct->sdlRenderer, (windowColor >> 24) & 0xFF,
-								   (windowColor >> 16) & 0xFF, (windowColor >> 8) & 0xFF, 0xFF);
+								   (windowColor >> 16) & 0xFF, (windowColor >> 8) & 0xFF, 0x55);
 			SDL_RenderDrawRect(windowStruct->sdlRenderer, &windowRect);
 			Window* topLevelWindowChildren = GET_CHILDREN(children[i]);
 			for (j = 0; j < windowStruct->children.length; j++) {

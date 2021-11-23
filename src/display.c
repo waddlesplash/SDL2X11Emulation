@@ -42,6 +42,11 @@ int XCloseDisplay(Display* display) {
     if (numDisplaysOpen > 0) {
         numDisplaysOpen--;
     }
+	int screenIndex;
+	for (screenIndex = 0; screenIndex < display->nscreens; screenIndex++) {
+		Screen* screen = &display->screens[screenIndex];
+		XFreeGC(display, screen->default_gc);
+	}
     if (GET_DISPLAY(display)->nscreens > 0) {
 		free((GET_DISPLAY(display))->screens);
     }
@@ -151,8 +156,9 @@ Display* XOpenDisplay(_Xconst char* display_name) {
             return NULL;
         }
         for (screenIndex = 0; screenIndex < display->nscreens; screenIndex++) {
-            display->screens[screenIndex].root = SCREEN_WINDOW;
-        }
+			Screen* screen = &display->screens[screenIndex];
+			screen->root = SCREEN_WINDOW;
+		}
     }
     GET_WINDOW_STRUCT(SCREEN_WINDOW)->sdlWindow = SDL_CreateWindow(NULL, 0, 0, 10, 10, SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
     if (GET_WINDOW_STRUCT(SCREEN_WINDOW)->sdlWindow == NULL) {
@@ -160,10 +166,15 @@ Display* XOpenDisplay(_Xconst char* display_name) {
         XCloseDisplay(display);
         return NULL;
     }
+	GET_WINDOW_STRUCT(SCREEN_WINDOW)->sdlRenderer = SDL_CreateRenderer(GET_WINDOW_STRUCT(SCREEN_WINDOW)->sdlWindow, -1, 0);
     if (numDisplaysOpen == 1) {
         // Init the font search path
         XSetFontPath(display, NULL, 0);
     }
+	for (screenIndex = 0; screenIndex < display->nscreens; screenIndex++) {
+		Screen* screen = &display->screens[screenIndex];
+		screen->default_gc = XCreateGC(display, screen->root, 0, NULL);
+	}
     return display;
 }
 
